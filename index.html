@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hamilton</title>
+
+    <!-- Babylon.js - cdsn -->
+    <script src="https://cdn.jsdelivr.net/npm/babylonjs@6.0.0/babylon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/babylonjs-materials@6.0.0/babylonjs.materials.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@6.0.0/babylonjs.loaders.min.js"></script>
+
+    <style>
+        html,
+        body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            outline: none !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="main-container">
+        <div id="canvasZone">
+            <canvas id="renderCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+
+        var canvas = document.getElementById("renderCanvas");
+
+        var startRenderLoop = function (engine, canvas) {
+            engine.runRenderLoop(function () {
+                if (sceneToRender && sceneToRender.activeCamera) {
+                    sceneToRender.render();
+                }
+            });
+        };
+
+        // //LOADING
+        // BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function () {
+        //     if (document.getElementById("customLoadingScreenDiv")) {
+        //         // Do not add a loading screen if there is already one
+        //         // document.getElementById('customLoadingScreenDiv').style.display = 'initial';
+        //         return;
+        //     }
+        // };
+        // //end of loading
+
+        var engine = null;
+        var scene = null;
+        var sceneToRender = null;
+        var createDefaultEngine = function () {
+            return new BABYLON.Engine(canvas, true, {
+                preserveDrawingBuffer: true,
+                stencil: true,
+                disableWebGL2Support: false,
+                doNotHandleTouchAction: true //handle touch action if touch not to be able
+            });
+        };
+        var createScene = async function () {
+            // //loading
+            // engine.displayLoadingUI();
+
+            var scene = new BABYLON.Scene(engine);
+            scene.clearColor = BABYLON.Color3.FromHexString("#EAEAEA");
+            // scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+
+            //BABYLON CAMERA////////////////////////////////////////////////////////////////////////
+            var camera = new BABYLON.ArcRotateCamera(
+                "Camera",
+                0,
+                0,
+                0,
+                new BABYLON.Vector3(0, 0, 0),
+                scene
+            );
+
+            camera.setPosition(new BABYLON.Vector3(-0.039, 0.703, -0.724));
+
+            camera.lowerBetaLimit = 0.5;
+
+            camera.attachControl(canvas, true)
+            camera.minZ = 0.01;
+            camera.lowerRadiusLimit = 0.8;
+            camera.upperRadiusLimit = 2;
+            camera.wheelDeltaPercentage = 0.01;
+
+            // viewCamera.pinchDeltaPercentage = 100
+            camera.useNaturalPinchZoom = true
+            // console.log(viewCamera.useNaturalPinchZoom)
+
+            delete camera.lowerBetaLimit;
+            delete camera.upperBetaLimit;
+
+            // viewCamera.upperBetaLimit = 1.8;
+            camera.fov = 0.5
+
+            let cameraTarget = new BABYLON.MeshBuilder.CreateBox("cameraTarget", { width: 0.1, height: 0.1, depth: 0.1 }, scene);
+
+            cameraTarget.position = new BABYLON.Vector3(0.27, 0, 0);
+            cameraTarget.isVisible = false;
+
+            camera.target = cameraTarget;
+
+            //               scene.onAfterCameraRenderObservable.add(() => {
+            //     // console.log(scene.cameras[0].alpha, scene.cameras[0].beta)
+            //     console.log(scene.cameras[0].position)
+            //     //   console.log(scene.cameras[0].radius)
+            //   });
+
+
+            //LOAD MESHES////////////////////////////////////////////////////////////////////////
+            // let loadePercent = 0;
+            let result = await Promise.all([
+                BABYLON.SceneLoader.ImportMeshAsync(
+                    "",
+                    "Hamilton Sensor_4k.glb",
+                    // "https://raw.githubusercontent.com/quincecreative/3d_models/main/glb/hamilton_sensor/Hamilton Sensor_4k.glb",
+                    null,
+                    scene,
+                    (evt) => {
+                        // if (evt.lengthComputable) {
+                        //     loadePercent = (evt.loaded * 100) / evt.total;
+                        //     loadePercent = loadePercent.toFixed();
+                        // } else {
+                        //     loadePercent = (evt.loaded * 100) / 2152548;
+                        //     loadePercent = loadePercent.toFixed();
+                        // }
+                        // loadingPercentages.innerHTML = `${loadePercent}`;
+                        // loadingLine.style.width = `${loadePercent}%`;
+                    }
+                ),
+            ]);
+
+            result[0].meshes[0].scaling.x = 3;
+            result[0].meshes[0].scaling.y = 3;
+            result[0].meshes[0].scaling.z = -3;
+
+            result[0].meshes[0].rotationQuaternion = null;
+
+            // result[0].meshes[0].rotation.y = 2 * Math.PI;
+            result[0].meshes[0].rotation.x = 0.8;
+
+            //ENVIRONMENT////////////////////////////////////////////////////////////////////////
+            scene.environmentTexture = new BABYLON.CubeTexture(
+                "studio.env",
+                // "https://raw.githubusercontent.com/quincecreative/environments/main/studio.env",
+                scene
+            );
+
+            scene.environmentTexture.rotationY = 0;
+            scene.environmentIntensity = 1;
+
+
+            //END OF SCENE////////////////////////////////////////////////////////////////////////
+            scene.executeWhenReady(() => {
+
+                // engine.hideLoadingUI(); //hide loading screen
+
+                engine.runRenderLoop(() => {
+                    //mobile to look nice
+                    engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
+                    engine.adaptToDeviceRatio = true;
+                    scene.render();
+                });
+            });
+
+            return scene;
+        };
+
+        window.initFunction = async function () {
+            window.scrollTo({
+                top: 0,
+                left: 0,
+                behavior: "instant",
+            });
+
+            var asyncEngineCreation = async function () {
+                try {
+                    return createDefaultEngine();
+                } catch (e) {
+                    console.log(
+                        "the available createEngine function failed. Creating the default engine instead"
+                    );
+                    return createDefaultEngine();
+                }
+            };
+
+            window.engine = await asyncEngineCreation();
+            if (!engine) throw "engine should not be null.";
+            startRenderLoop(engine, canvas);
+            window.scene = createScene();
+        };
+        initFunction().then(() => {
+            sceneToRender = scene;
+        });
+
+        // Resize
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
+
+    </script>
+</body>
+
+</html>
